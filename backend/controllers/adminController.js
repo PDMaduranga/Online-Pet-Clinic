@@ -1,77 +1,71 @@
 const User = require("../models/User");
 
-const getPendingClinics = async (req, res) => {
+// Get all clinics pending approval
+exports.getClinics = async (req, res) => {
   try {
-    const pendingClinics = await Clinic.find({ status: "pending" }); // Adjust the query as needed
-    res.status(200).json({ clinics: pendingClinics });
+    const clinics = await User.find({ role: "Clinic" });
+    res.status(200).json(clinics);
   } catch (error) {
-    res.status(500).json({ message: "Failed to fetch pending clinics", error });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-const approveClinic = async (req, res) => {
-  // Approve clinic registration
+// Approve a clinic's registration
+exports.approveClinic = async (req, res) => {
   try {
-    const clinicId = req.params.id;
+    const { clinicId } = req.params;
+    const clinic = await User.findById(clinicId);
 
-    // Find the user with the given ID and ensure they are a clinic
-    const clinic = await User.findOne({ _id: clinicId, role: "clinic" });
     if (!clinic) {
-      return res.status(404).json({ msg: "Clinic not found" });
+      return res.status(404).json({ message: `Clinic ${clinicId} not found` });
     }
 
-    // Update the approved status to true
+    if (clinic.role !== "Clinic") {
+      return res.status(400).json({ message: "User is not a clinic" });
+    }
+
     clinic.approved = true;
     await clinic.save();
 
-    res.json({ msg: "Clinic approved successfully", clinic });
+    res.status(200).json({ message: "Clinic approved successfully", clinic });
   } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-const updateUser = async (req, res) => {
+// Update clinic details
+exports.updateClinic = async (req, res) => {
   try {
-    const userId = req.params.id;
-    const { name, email, approved } = req.body;
+    const { clinicId } = req.params;
+    const updates = req.body;
 
-    // Find the user by ID
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ msg: "User not found" });
+    const clinic = await User.findByIdAndUpdate(clinicId, updates, {
+      new: true,
+    });
+
+    if (!clinic) {
+      return res.status(404).json({ message: "Clinic not found" });
     }
 
-    // Update only the fields provided in the request
-    if (name) user.name = name;
-    if (email) user.email = email;
-    if (typeof approved === "boolean") user.approved = approved;
-
-    await user.save();
-
-    res.json({ msg: "User updated successfully", user });
+    res.status(200).json({ message: "Clinic updated successfully", clinic });
   } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-const deleteClinic = async (req, res) => {
-  // Delete clinic
+// Delete a clinic from the system
+exports.deleteClinic = async (req, res) => {
   try {
-    const userId = req.params.id;
+    const { clinicId } = req.params;
 
-    // Find the user by ID and delete
-    const user = await User.findByIdAndDelete(userId);
-    if (!user) {
-      return res.status(404).json({ msg: "User not found" });
+    const clinic = await User.findByIdAndDelete(clinicId);
+
+    if (!clinic) {
+      return res.status(404).json({ message: "Clinic not found" });
     }
 
-    res.json({ msg: "User deleted successfully" });
+    res.status(200).json({ message: "Clinic deleted successfully" });
   } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
-module.exports = { getPendingClinics, approveClinic, updateUser, deleteClinic };

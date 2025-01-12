@@ -1,17 +1,16 @@
 const express = require("express");
 const {
-  getPendingClinics,
+  getClinics,
   approveClinic,
-  updateUser,
+  updateClinic,
   deleteClinic,
 } = require("../controllers/adminController");
-const authMiddleware = require("../middleware/authMiddleware");
-
 const router = express.Router();
+const { protect, adminOnly } = require("../middleware/authMiddleware");
 
-router.get("/clinics/pending", authMiddleware("admin"), getPendingClinics);
-router.put("/clinics/approve/:id", authMiddleware("admin"), approveClinic);
-router.put("/users/:id", authMiddleware("admin"), updateUser);
-router.delete("/clinics/:id", authMiddleware("admin"), deleteClinic);
+router.get("/clinics", protect, adminOnly, getClinics);
+router.put("/approve/:clinicId", protect, adminOnly, approveClinic);
+router.put("/update-clinic/:clinicId", protect, adminOnly, updateClinic);
+router.delete("/delete-clinic/:clinicId", protect, adminOnly, deleteClinic);
 
 module.exports = router;

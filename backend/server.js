@@ -1,10 +1,6 @@
 const express = require("express");
-const connectDB = require("./config/db");
-const authRoutes = require("./routes/authRoutes");
-const adminRoutes = require("./routes/adminRoutes");
-const clinicRoutes = require("./routes/clinicRoutes");
-const ownerRoutes = require("./routes/ownerRoutes");
 const dotenv = require("dotenv");
+const connectDB = require("./config/db");
 const cors = require("cors");
 
 dotenv.config();
@@ -12,12 +8,19 @@ connectDB();
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:3000", // Your frontend URL
+    methods: ["POST", "GET", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
 
-app.use("/api/auth", authRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/clinic", clinicRoutes);
-app.use("/api/owner", ownerRoutes);
+// Route imports
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/admin", require("./routes/adminRoutes"));
+app.use("/api/clinic", require("./routes/clinicRoutes"));
+app.use("/api/owner", require("./routes/ownerRoutes"));
 
-const PORT = process.env.PORT || 5050;
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

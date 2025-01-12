@@ -1,115 +1,134 @@
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Admin = require("../models/Admin");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 
-const registerUser = async (req, res) => {
-  // Registration logic
+// Register a new user
+exports.register = async (req, res) => {
+  const { name, email, password, role } = req.body;
+
   try {
-    const { name, email, password, role } = req.body;
-
-    // Check if all fields are provided
-    if (!name || !email || !password || !role) {
-      return res.status(400).json({ msg: "Please enter all fields" });
-    }
-
-    // Check if the email already exists
+    // Check if the user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ msg: "User already exists" });
+      return res.status(400).json({ message: "User already exists" });
     }
 
-    // Hash the password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create a new user with the hashed password
-    const user = new User({
+    // Create a new user instance
+    const newUser = new User({
       name,
       email,
-      password: hashedPassword,
+      password,
       role,
-      approved: role === "clinic" ? false : true, // Clinics need admin approval
+      approved: role === "Clinic" ? false : true, // Clinics require approval by admin
     });
 
-    await user.save();
+    // Save the user to the database
+    await newUser.save();
 
-    // Generate a JWT token
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "1h",
-      }
-    );
-
-    res.status(201).json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        approved: user.approved,
-      },
-    });
+    res
+      .status(201)
+      .json({ message: "User registered successfully", user: newUser });
   } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-const loginUser = async (req, res) => {
-  // Login logic
+// Register Admin
+exports.adminRegister = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    const existingAdmin = await Admin.findOne({ email });
+    if (existingAdmin)
+      return res.status(400).json({ message: "Admin already exists" });
+
+    const newAdmin = new Admin({ name, email, password, role: "Admin" });
+    await newAdmin.save();
+
+    res
+      .status(201)
+      .json({ message: "Admin registered successfully", user: newAdmin });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error registering admin", error: error.message });
+  }
+};
+
+// Admin login
+exports.adminLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const admin = await Admin.findOne({ email });
+
+    if (!admin)
+      return res.status(401).json({ message: "Invalid email or password" });
+
+    const isMatch = await bcrypt.compare(password, admin.password);
+    if (!isMatch)
+      return res.status(401).json({ message: "Invalid email or password" });
+
+    const token = jwt.sign(
+      { id: admin._id, role: admin.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      user: {
+        id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error logging in", error });
+  }
+};
+
+// User login
+exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check if all fields are provided
-    if (!email || !password) {
-      return res.status(400).json({ msg: "Please enter all fields" });
-    }
-
-    // Check if user exists
+    // Check if the user exists
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ msg: "Invalid credentials" });
-    }
 
-    // Check if the password matches
+    if (!user)
+      return res.status(401).json({ message: "Invalid email or password" });
+    // Check if the password is correct
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ msg: "Invalid credentials" });
-    }
+    if (!isMatch)
+      return res.status(401).json({ message: "Invalid email or password" });
 
-    // Check if the clinic is approved (if the user is a clinic)
-    if (user.role === "clinic" && !user.approved) {
+    // Check if the user is approved (only for clinics)
+    if (user.role === "Clinic" && !user.approved) {
       return res
         .status(403)
-        .json({ msg: "Your account is pending approval by the admin" });
+        .json({ message: "Clinic is not approved by the admin yet" });
     }
 
-    // Generate a JWT token
+    // Create a JWT token
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      {
-        expiresIn: "1h",
-      }
+      { expiresIn: "1h" }
     );
 
-    res.json({
+    res.status(200).json({
+      message: "Login successful",
       token,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
-        approved: user.approved,
       },
     });
   } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
-module.exports = { registerUser, loginUser };
