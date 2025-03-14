@@ -10,7 +10,7 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:3000", // Your frontend URL
+    origin: "https://online-pet-clinic-frontend.onrender.com", // Your frontend URL
     methods: ["POST", "GET", "PUT", "DELETE"],
     credentials: true,
   })
