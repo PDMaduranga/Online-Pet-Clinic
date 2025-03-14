@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "https://online-pet-clinic.onrender.com"; // Adjust to your backend server URL
+const API_URL = "https://online-pet-clinic.onrender.com/api"; // Adjust to your backend server URL
 
 // Register User or Admin
 export const registerUser = async (userData) => {
